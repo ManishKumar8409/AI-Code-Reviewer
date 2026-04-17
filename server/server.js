@@ -1,4 +1,4 @@
-require("dotenv").config();   // 🔥 FIRST LINE
+require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
@@ -13,9 +13,15 @@ connectDB();
 
 const app = express();
 
-app.use(cors());
+// ✅ CORS FIX
+app.use(cors({
+  origin: "*",
+  credentials: true
+}));
+
 app.use(express.json());
 
+// Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/review", reviewRoutes);
 
