@@ -14,22 +14,22 @@ const Login = () => {
   };
 
   const handleSubmit = async () => {
-    try {
-      if (isLogin) {
-        const res = await loginUser(form);
+  try {
+    if (isLogin) {
+      const res = await loginUser(form);
 
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("user", JSON.stringify(res.data.user));
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
 
-        navigate("/");
-      } else {
-        await registerUser(form);
-        setIsLogin(true);
-      }
-    } catch {
-      alert("Error");
+      navigate("/dashboard"); // 🔥 FIX
+    } else {
+      await registerUser(form);
+      setIsLogin(true);
     }
-  };
+  } catch {
+    alert("Error");
+  }
+};
 
   return (
     <div className="auth-wrapper">

@@ -3,21 +3,29 @@ import Home from "./pages/Home";
 import Login from "./pages/Login";
 import History from "./pages/History";
 import Profile from "./pages/Profile";
+import Dashboard from "./pages/Dashboard";
 import "./index.css";
 
 function App() {
-  const user = localStorage.getItem("user"); // 🔥 check login
-  
+  const user = localStorage.getItem("user");
+
   return (
     <BrowserRouter>
       <Routes>
-       {/* profile */}
+
+        {/* Dashboard (Protected) */}
+        <Route
+          path="/dashboard"
+          element={user ? <Dashboard /> : <Navigate to="/login" />}
+        />
+
+        {/* Profile */}
         <Route
           path="/profile"
           element={user ? <Profile /> : <Navigate to="/login" />}
         />
 
-        {/* Home (Protected) */}
+        {/* Home */}
         <Route
           path="/"
           element={user ? <Home /> : <Navigate to="/login" />}
@@ -26,12 +34,11 @@ function App() {
         {/* Login */}
         <Route path="/login" element={<Login />} />
 
-        {/* History (Protected) */}
+        {/* History */}
         <Route
           path="/history"
           element={user ? <History /> : <Navigate to="/login" />}
         />
-        <Route path="/history" element={<History />} />
 
       </Routes>
     </BrowserRouter>
