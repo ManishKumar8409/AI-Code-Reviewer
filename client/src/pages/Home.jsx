@@ -1,163 +1,227 @@
 import { useState, useContext } from "react";
+
 import CodeEditor from "../components/CodeEditor";
 import OutputPanel from "../components/OutputPanel";
 import LanguageSelector from "../components/LanguageSelector";
+
 import { ThemeContext } from "../context/ThemeContext";
 import { reviewCode } from "../services/reviewService";
-import { Link } from "react-router-dom";
 
 const Home = () => {
   const [code, setCode] = useState("");
   const [language, setLanguage] = useState("javascript");
   const [output, setOutput] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
+
   const { dark, setDark } = useContext(ThemeContext);
 
-  const user = JSON.parse(localStorage.getItem("user"));
-
-  // 🔥 REVIEW FUNCTION
+  // =========================
+  // REVIEW CODE
+  // =========================
   const handleReview = async () => {
-    console.log("CLICKED");
+    console.log("🔥 REVIEW BUTTON CLICKED");
+    console.log("📦 CURRENT CODE:", code);
+    console.log("📏 CODE LENGTH:", code.length);
+    console.log("🌐 LANGUAGE:", language);
 
-    if (!code) {
+    if (!code || !code.trim()) {
+      console.log("❌ CODE IS EMPTY");
       alert("Please enter code first");
       return;
     }
 
     try {
-      const res = await reviewCode(code, language, user?._id);
+      setReviewing(true);
+      setCopied(false);
+      setOutput("⏳ Reviewing your code...");
 
-      console.log("RESPONSE:", res);
+      console.log("🚀 CALLING REVIEW API...");
+
+      const res = await reviewCode(code, language);
+
+      console.log("✅ API RESPONSE:", res);
 
       setOutput(res?.result || "No result found");
     } catch (error) {
-      console.log("ERROR:", error);
-      setOutput("Error reviewing code");
+      console.error("❌ REVIEW ERROR:", error);
+      console.error("❌ ERROR MESSAGE:", error.message);
+      console.error("❌ RESPONSE:", error.response);
+      console.error("❌ RESPONSE DATA:", error.response?.data);
+
+      setOutput(
+        error?.response?.data?.error ||
+          error?.message ||
+          "Error reviewing code. Please try again."
+      );
+    } finally {
+      setReviewing(false);
+    }
+  };
+
+  // =========================
+  // CLEAR CODE + OUTPUT
+  // =========================
+  const handleClear = () => {
+    setCode("");
+    setOutput("");
+    setCopied(false);
+  };
+
+  // =========================
+  // COPY AI RESPONSE
+  // =========================
+  const handleCopy = async () => {
+    if (!output || output.startsWith("⏳")) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(output);
+
+      setCopied(true);
+
+      setTimeout(() => {
+        setCopied(false);
+      }, 2000);
+    } catch (error) {
+      console.error("❌ COPY ERROR:", error);
+
+      // Fallback for older browser situations
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = output;
+
+        document.body.appendChild(textArea);
+        textArea.select();
+
+        document.execCommand("copy");
+
+        document.body.removeChild(textArea);
+
+        setCopied(true);
+
+        setTimeout(() => {
+          setCopied(false);
+        }, 2000);
+      } catch (fallbackError) {
+        console.error("❌ COPY FALLBACK ERROR:", fallbackError);
+      }
     }
   };
 
   return (
-    <div style={{ height: "100vh", background: "#020617", color: "#e2e8f0" }}>
-
-      {/* 🔹 NAVBAR */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        padding: "6px 20px",
-        borderBottom: "1px solid #1f2937"
-      }}>
-        <h2>⚡ AI Code Reviewer</h2>
-
-        <div style={{ display: "flex", gap: "10px" }}>
-          <Link to="/login" style={{ color: "white" }}>Account</Link>
-          <Link to="/profile" style={{ color: "white" }}>Profile</Link>
-
-          <button onClick={() => setDark(!dark)}>
-            {dark ? "☀️" : "🌙"}
-          </button>
+    <div className="reviewer-app">
+      {/* =========================
+          NAVBAR
+      ========================= */}
+      <header className="reviewer-navbar">
+        <div className="brand-section">
+          <h2>⚡ AI Code Reviewer</h2>
+          <span className="brand-badge">AI Powered</span>
         </div>
-      </div>
 
-      {/* 🔹 MAIN */}
-      <div style={{
-        height: "calc(100vh - 50px)",
-        display: "flex",
-        justifyContent: "center",
-        paddingTop: "10px"
-      }}>
+        <button
+          className="theme-button"
+          onClick={() => setDark(!dark)}
+          title="Toggle theme"
+        >
+          {dark ? "☀️" : "🌙"}
+        </button>
+      </header>
 
-        <div style={{
-          width: "90%",
-          height: "88%",
-          display: "flex",
-          borderRadius: "12px",
-          overflow: "hidden",
-          background: "#0f172a",
-          border: "1px solid #1f2937"
-        }}>
+      {/* =========================
+          MAIN CONTAINER
+      ========================= */}
+      <main className="reviewer-main">
+        <div className="reviewer-workspace">
+          {/* =========================
+              LEFT EDITOR SECTION
+          ========================= */}
+          <section className="editor-section">
+            {/* EDITOR TOOLBAR */}
+            <div className="editor-toolbar">
+              <div className="language-wrapper">
+                <LanguageSelector
+                  language={language}
+                  setLanguage={setLanguage}
+                />
+              </div>
 
-          {/* LEFT */}
-          <div style={{
-            width: "50%",
-            display: "flex",
-            flexDirection: "column",
-            borderRight: "1px solid #1f2937"
-          }}>
-
-            {/* TOP BAR */}
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "10px",
-              background: "#111827"
-            }}>
-
-              <LanguageSelector
-                language={language}
-                setLanguage={setLanguage}
-              />
-
-              <div style={{ display: "flex", gap: "6px" }}>
-
-                <Link to="/history" style={{
-                  background: "#10b981",
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  color: "white",
-                  textDecoration: "none"
-                }}>
-                  History
-                </Link>
-
-                {/* ✅ FIXED BUTTON */}
+              <div className="editor-actions">
+                {/* CLEAR */}
                 <button
-                  onClick={handleReview}
-                  style={{
-                    background: "#6366f1",
-                    color: "white",
-                    padding: "6px 12px",
-                    borderRadius: "6px",
-                    border: "none",
-                    cursor: "pointer"
-                  }}
+                  className="clear-button"
+                  onClick={handleClear}
+                  disabled={!code && !output}
                 >
-                  Review
+                  🗑️ Clear
                 </button>
 
+                {/* REVIEW */}
+                <button
+                  className={`review-button ${
+                    reviewing ? "reviewing" : ""
+                  }`}
+                  onClick={handleReview}
+                  disabled={reviewing}
+                >
+                  {reviewing ? "⏳ Reviewing..." : "⚡ Review"}
+                </button>
               </div>
             </div>
 
-            {/* EDITOR */}
-            <CodeEditor
-              code={code}
-              setCode={setCode}
-              language={language}
-            />
+            {/* CODE EDITOR */}
+            <div className="editor-container">
+              <CodeEditor
+                code={code}
+                setCode={setCode}
+                language={language}
+              />
+            </div>
+          </section>
 
-          </div>
+          {/* =========================
+              RIGHT OUTPUT SECTION
+          ========================= */}
+          <section className="output-section">
+            {/* OUTPUT HEADER */}
+            <div className="output-header">
+              <div>
+                <h3>Review Output</h3>
+                <span>AI analysis & suggestions</span>
+              </div>
 
-          {/* RIGHT */}
-          <div style={{
-            width: "50%",
-            padding: "15px"
-          }}>
-
-            <h3>Review Output</h3>
-
-            <div style={{
-              background: "#020617",
-              borderRadius: "8px",
-              padding: "10px",
-              height: "90%",
-              overflow: "auto"
-            }}>
-              <OutputPanel output={output} />
+              <button
+                className={`copy-button ${copied ? "copied" : ""}`}
+                onClick={handleCopy}
+                disabled={!output || output.startsWith("⏳")}
+              >
+                {copied ? "✅ Copied!" : "📋 Copy"}
+              </button>
             </div>
 
-          </div>
+            {/* OUTPUT */}
+            <div className="output-container">
+              {output ? (
+                <OutputPanel output={output} />
+              ) : (
+                <div className="empty-output">
+                  <div className="empty-icon">🤖</div>
 
+                  <h3>Ready to Review</h3>
+
+                  <p>
+                    Paste your code in the editor and click
+                    <strong> Review</strong> to get AI-powered
+                    feedback.
+                  </p>
+                </div>
+              )}
+            </div>
+          </section>
         </div>
-      </div>
+      </main>
     </div>
   );
 };

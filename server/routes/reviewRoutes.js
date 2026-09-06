@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+
 const Review = require("../models/Review");
 const openai = require("../config/openai");
 
@@ -7,82 +8,103 @@ router.post("/", async (req, res) => {
   try {
     console.log("🔥 REVIEW API HIT");
 
-    const { code, language, userId } = req.body;
+    const { code, language } = req.body;
 
+    console.log("LANGUAGE:", language);
     console.log("CODE:", code);
 
-    // 🔥 AI PROMPT
+    // Validation
+    if (!code || !code.trim()) {
+      return res.status(400).json({
+        error: "Code is required",
+      });
+    }
+
+    // AI PROMPT
     const prompt = `
-You are a senior software engineer.
+You are a senior software engineer and expert code reviewer.
 
 Analyze the following ${language} code:
 
 ${code}
 
-Give response in this format:
+Give response in this exact format:
 
 1. ❌ Errors / Issues:
-- Explain what is wrong (simple language)
+- Explain what is wrong in simple language.
 
 2. ✅ Correct Code:
-- Provide fixed version of code
+- Provide the fixed version of the code.
 
 3. 💡 Explanation:
-- Explain what you changed and why
+- Explain what you changed and why.
 
 4. ▶️ Output:
-- What will be the output after fixing
+- Explain what the output will be after fixing.
 
-Keep answer clean and structured.
+Keep the response clean, structured and easy to understand.
 `;
 
-
-router.get("/:userId", async (req, res) => {
-  try {
-    console.log("🔥 HISTORY API HIT");   // 👈 ADD
-
-    const reviews = await Review.find({ userId: req.params.userId });
-
-    console.log("DATA:", reviews);      // 👈 ADD
-
-    res.json(reviews);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Failed to fetch history" });
-  }
-});
-
-
-    // 🔥 OPENAI CALL
+    // OPENROUTER / AI CALL
     const response = await openai.chat.completions.create({
-  model: "deepseek/deepseek-chat",  // ✅ FREE MODEL
-  messages: [
-    { role: "system", content: "You are an expert code reviewer." },
-    { role: "user", content: prompt }
-  ],
-});
-
-    const result = response.choices[0].message.content;
-
-    console.log("AI RESULT:", result);
-
-    // 💾 SAVE TO DB
-    const review = new Review({
-      code,
-      language,
-      result,
-      userId,
+      model: "deepseek/deepseek-chat",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert code reviewer.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
     });
 
-    await review.save();
+    const result = response?.choices?.[0]?.message?.content;
 
-    // 📤 RESPONSE
-    res.json({ result });
+    console.log("🤖 AI RESULT:", result);
+
+    if (!result) {
+      return res.status(500).json({
+        error: "No response received from AI",
+      });
+    }
+
+    /*
+      Save review to database.
+
+      IMPORTANT:
+      This assumes userId is NOT required in Review schema.
+    */
+    try {
+      const review = new Review({
+        code,
+        language,
+        result,
+      });
+
+      await review.save();
+
+      console.log("💾 Review saved to MongoDB");
+    } catch (dbError) {
+      console.log("⚠️ DB SAVE ERROR:", dbError.message);
+
+      // AI result should still be returned
+      // even if history saving fails.
+    }
+
+    // RESPONSE
+    res.json({
+      result,
+    });
 
   } catch (error) {
-  console.log("❌ FULL ERROR:", error);   // 👈 पूरा error दिखेगा
-  res.status(500).json({ error: "AI review failed" });
-}
+    console.log("❌ FULL REVIEW ERROR:", error);
+
+    res.status(500).json({
+      error: "AI review failed",
+    });
+  }
 });
 
 module.exports = router;

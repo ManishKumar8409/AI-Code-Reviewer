@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://ai-code-reviewer-htew.onrender.com/api"  // 🔥 backend URL
+  baseURL: import.meta.env.VITE_API_URL,
 });
 
 export default API;

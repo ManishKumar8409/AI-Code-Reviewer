@@ -6,8 +6,21 @@ const CodeEditor = ({ code, setCode, language }) => {
       height="100%"
       language={language}
       value={code}
-      onChange={(value) => setCode(value)}
+      onChange={(value) => setCode(value || "")}
       theme="vs-dark"
+      options={{
+        minimap: {
+          enabled: false,
+        },
+        fontSize: 14,
+        automaticLayout: true,
+        wordWrap: "on",
+        scrollBeyondLastLine: false,
+        padding: {
+          top: 10,
+          bottom: 10,
+        },
+      }}
     />
   );
 };
